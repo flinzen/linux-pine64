@@ -12,6 +12,9 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/sunxi_drm.h>
 
+#include <linux/console.h>
+#include <linux/pm_runtime.h>
+
 #include "sunxi_drm_drv.h"
 #include "sunxi_drm_core.h"
 #include "sunxi_drm_crtc.h"
@@ -37,6 +40,7 @@ static struct platform_device *sunxi_drm_pdev;
 static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 {
 	struct sunxi_drm_private *private;
+	struct platform_device *pdev = dev->platformdev;
 	int ret;
 
 	DRM_DEBUG_DRIVER("[%d]\n", __LINE__);
@@ -77,6 +81,7 @@ static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 	}
 
 	drm_vblank_offdelay = VBLANK_OFF_DELAY;
+	platform_set_drvdata(pdev, dev);
 
 	return 0;
 
@@ -238,12 +243,90 @@ static int sunxi_drm_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int sunxi_drm_runtime_suspend(struct device *dev)
+{
+	struct drm_device *ddev = dev_get_drvdata(dev);
+	struct sunxi_drm_private *priv = ddev->dev_private;
+	struct drm_connector *connector;
+
+	DRM_DEBUG_DRIVER("%s [%d]\n", __func__, __LINE__);
+
+	drm_kms_helper_poll_disable(ddev);
+
+	if (priv->fb_helper && priv->fb_helper->fbdev) {
+		console_lock();
+		fb_set_suspend(priv->fb_helper->fbdev, 1);
+		console_unlock();
+	}
+
+	/* turn off display hw */
+	list_for_each_entry(connector, &ddev->mode_config.connector_list, head) {
+		if (connector->funcs->dpms) {
+			connector->funcs->dpms(connector, DRM_MODE_DPMS_OFF);
+		}
+	}
+	return 0;
+}
+
+static int sunxi_drm_suspend(struct device *dev)
+{
+	if (pm_runtime_suspended(dev)) {
+		DRM_DEBUG_DRIVER("%s: already suspended\n", __func__);
+		return 0;
+	}
+
+	return sunxi_drm_runtime_suspend(dev);
+}
+
+static int sunxi_drm_runtime_resume(struct device *dev)
+{
+	struct drm_device *ddev = dev_get_drvdata(dev);
+	struct sunxi_drm_private *priv = ddev->dev_private;
+	struct drm_connector *connector;
+
+	DRM_DEBUG_DRIVER("%s [%d]\n", __func__, __LINE__);
+
+	drm_helper_resume_force_mode(ddev);
+	drm_kms_helper_poll_enable(ddev);
+	/* turn on display hw */
+	list_for_each_entry(connector, &ddev->mode_config.connector_list, head) {
+		if (connector->funcs->dpms) {
+			connector->funcs->dpms(connector, DRM_MODE_DPMS_ON);
+		}
+	}
+
+	if (priv->fb_helper && priv->fb_helper->fbdev) {
+		console_lock();
+		fb_set_suspend(priv->fb_helper->fbdev, 0);
+		console_unlock();
+	}
+	return 0;
+}
+
+static int sunxi_drm_resume(struct device *dev)
+{
+	if (pm_runtime_suspended(dev)) {
+		DRM_DEBUG_DRIVER("%s: already resumed\n", __func__);
+		return 0;
+	}
+
+	return sunxi_drm_runtime_resume(dev);
+}
+#endif
+
+static const struct dev_pm_ops sunxi_drm_pm_driver = {
+	SET_SYSTEM_SLEEP_PM_OPS(sunxi_drm_suspend, sunxi_drm_resume)
+	SET_RUNTIME_PM_OPS(sunxi_drm_runtime_suspend, sunxi_drm_runtime_resume, NULL)
+};
+
 static struct platform_driver sunxi_drm_platform_driver = {
 	.probe = sunxi_drm_platform_probe,
 	.remove = sunxi_drm_platform_remove,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "sunxi-drm",
+		.pm = &sunxi_drm_pm_driver,
 	},
 };
 
