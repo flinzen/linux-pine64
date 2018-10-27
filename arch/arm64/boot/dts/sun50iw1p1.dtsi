@@ -78,6 +78,8 @@
 					1104000
 					1152000
 					1200000
+					1248000
+					1296000
 					1344000>;
 			clock-latency = <2000000>;
 			clock-frequency = <1008000000>;
@@ -277,10 +279,10 @@
 
 	dvfs_table: dvfs_table {
 		compatible = "allwinner,dvfs_table";
-		max_freq = <1152000000>;
+		max_freq = <1248000000>;
 		min_freq = <480000000>;
 		lv_count = <8>;
-		lv1_freq = <1152000000>;
+		lv1_freq = <1248000000>;
 		lv1_volt = <1300>;
 		lv2_freq = <1104000000>;
 		lv2_volt = <1260>;
@@ -1293,14 +1295,14 @@
 			status = "okay";
 			state_cnt = <10>;
 			cluster_num = <1>;
-			state0 = <1152000 4>;
-			state1 = <1104000 4>;
-			state2 = <1056000 4>;
-			state3 = <1008000 4>;
-			state4 = <960000 4>;
-			state5 = <912000 4>;
-			state6 = <816000 4>;
-			state7 = <648000 4>;
+			state0 = <1248000 4>;
+			state1 = <1152000 4>;
+			state2 = <1104000 4>;
+			state3 = <1056000 4>;
+			state4 = <1008000 4>;
+			state5 = <960000 4>;
+			state6 = <912000 4>;
+			state7 = <816000 4>;
 			state8 = <648000 2>;
 			state9 = <648000 1>;
 		};
