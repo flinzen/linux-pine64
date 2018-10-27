@@ -1078,7 +1078,6 @@ int sunxi_pwm_dev_init(struct sunxi_lcd_private *sunxi_lcd)
 		backlight_bright = sunxi_lcd->lcd_cfg->backlight_bright;
 
 		duty_ns = (backlight_bright * period_ns) / 256;
-		pwm_set_polarity(pwm_info->pwm_dev, pwm_info->polarity);
 		pwm_info->duty_ns = duty_ns;
 		pwm_info->period_ns = period_ns;
 		sunxi_lcd->pwm_info = pwm_info;
@@ -1126,6 +1125,7 @@ int sunxi_common_pwm_set_bl(struct sunxi_lcd_private *sunxi_lcd, unsigned int br
 		lcd_cfg->backlight_bright = bright;
 		DRM_DEBUG_KMS("bright:%d duty_ns:%d period_ns:%llu\n", bright, duty_ns, period_ns);
 
+		pwm_set_polarity(sunxi_lcd->pwm_info->pwm_dev, sunxi_lcd->pwm_info->polarity);
 		sunxi_drm_sys_pwm_config(sunxi_lcd->pwm_info->pwm_dev, duty_ns, period_ns);
 	}
 	return 0;
