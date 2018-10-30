@@ -222,7 +222,7 @@ static void lowlevel_buffer_destroy(struct drm_device *dev,
 	DRM_DEBUG_KMS("[%d]\n", __LINE__);
 
 	if ((buf->flags & SUNXI_BO_CONTIG) == 0) {
-		DRM_INFO("destroy non-contig mem.\n");
+		DRM_DEBUG_KMS("destroy non-contig mem.\n");
 		for_each_sg(buf->sgt->sgl, sg, buf->sgt->nents, i) {
 			page = sg_page(sg);
 			order = get_order(sg->length);
