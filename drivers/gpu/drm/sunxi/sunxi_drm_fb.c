@@ -78,7 +78,7 @@ static int sunxi_check_max_plane_num_format(__u32 pixel_format)
 static struct drm_framebuffer *sunxi_user_fb_create(struct drm_device *dev,
 	struct drm_file *file_priv, struct drm_mode_fb_cmd2 *mode_cmd)
 {
-	struct drm_gem_object *obj[MAX_FB_BUFFER];
+	struct drm_gem_object *obj[MAX_FB_BUFFER] = { NULL };
 	struct drm_framebuffer *fb_obj;
 	int i, ret, max_cnt, nr_gem;
 
