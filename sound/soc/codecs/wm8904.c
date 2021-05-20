@@ -319,10 +319,14 @@ static int wm8904_configure_clocking(struct snd_soc_codec *codec)
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	unsigned int clock0, clock2, rate;
 
+	printk(KERN_ERR "wm8904_configure_clocking started\n");
+
 	/* Gate the clock while we're updating to avoid misclocking */
 	clock2 = snd_soc_read(codec, WM8904_CLOCK_RATES_2);
 	snd_soc_update_bits(codec, WM8904_CLOCK_RATES_2,
 			    WM8904_SYSCLK_SRC, 0);
+
+	printk(KERN_ERR "wm8904_configure_clocking after snd_soc_update_bits\n");
 
 	/* This should be done on init() for bypass paths */
 	switch (wm8904->sysclk_src) {
@@ -375,6 +379,7 @@ static void wm8904_set_drc(struct snd_soc_codec *codec)
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	struct wm8904_pdata *pdata = wm8904->pdata;
 	int save, i;
+	printk(KERN_ERR "wm8904_set_drc started\n");
 
 	/* Save any enables; the configuration should clear them. */
 	save = snd_soc_read(codec, WM8904_DRC_0);
@@ -395,7 +400,7 @@ static int wm8904_put_drc_enum(struct snd_kcontrol *kcontrol,
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	struct wm8904_pdata *pdata = wm8904->pdata;
 	int value = ucontrol->value.integer.value[0];
-
+	printk(KERN_ERR "wm8904_put_drc_enum started\n");
 	if (value >= pdata->num_drc_cfgs)
 		return -EINVAL;
 
@@ -494,6 +499,7 @@ static int wm8904_set_deemph(struct snd_soc_codec *codec)
 {
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	int val, i, best;
+	printk(KERN_ERR "wm8904_set_deemph started\n");
 
 	/* If we're using deemphasis select the nearest available sample 
 	 * rate.
@@ -569,6 +575,7 @@ static int wm8904_adc_osr_put(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	printk(KERN_ERR "wm8904_adc_osr_put started\n");
 	unsigned int val;
 	int ret;
 
@@ -1161,6 +1168,7 @@ static const struct snd_soc_dapm_route wm8912_intercon[] = {
 
 static int wm8904_add_widgets(struct snd_soc_codec *codec)
 {
+	printk(KERN_ERR "wm8904_add_widgets started\n");
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
@@ -1273,6 +1281,7 @@ static int wm8904_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
+	printk(KERN_ERR "wm8904_hw_params started\n");
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	int ret, i, best, best_val, cur_val;
@@ -1399,10 +1408,11 @@ static int wm8904_hw_params(struct snd_pcm_substream *substream,
 
 static int wm8904_set_sysclk(struct snd_soc_dai *dai, int clk_id,
 			     unsigned int freq, int dir)
-{
+{	
+	printk(KERN_ERR "wm8904_set_sysclk started\n");
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8904_priv *priv = snd_soc_codec_get_drvdata(codec);
-
+	printk(KERN_ERR "clk_id: %i\n", clk_id);
 	switch (clk_id) {
 	case WM8904_CLK_MCLK:
 		priv->sysclk_src = clk_id;
@@ -1426,6 +1436,7 @@ static int wm8904_set_sysclk(struct snd_soc_dai *dai, int clk_id,
 
 static int wm8904_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
+	printk(KERN_ERR "wm8904_set_fmt started\n");
 	struct snd_soc_codec *codec = dai->codec;
 	unsigned int aif1 = 0;
 	unsigned int aif3 = 0;
@@ -1516,6 +1527,7 @@ static int wm8904_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 static int wm8904_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 			       unsigned int rx_mask, int slots, int slot_width)
 {
+	printk(KERN_ERR "wm8904_set_tdm_slot started\n");
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	int aif1 = 0;
@@ -1673,6 +1685,7 @@ static int fll_factors(struct _fll_div *fll_div, unsigned int Fref,
 static int wm8904_set_fll(struct snd_soc_dai *dai, int fll_id, int source,
 			  unsigned int Fref, unsigned int Fout)
 {
+	printk(KERN_ERR "wm8904_set_fll started\n");
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	struct _fll_div fll_div;
@@ -2054,6 +2067,8 @@ static int wm8904_probe(struct snd_soc_codec *codec)
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
+	printk(KERN_ERR "wm8904_probe started\n");
+
 	codec->control_data = wm8904->regmap;
 
 	switch (wm8904->devtype) {
@@ -2068,14 +2083,19 @@ static int wm8904_probe(struct snd_soc_codec *codec)
 		return -EINVAL;
 	}
 
+	printk(KERN_ERR "wm8904_probe before set cache io\n");
+
 	ret = snd_soc_codec_set_cache_io(codec, 8, 16, SND_SOC_REGMAP);
 	if (ret != 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
 		return ret;
 	}
 
+	printk(KERN_ERR "wm8904_probe before wm8904_handle_pdata\n");
+
 	wm8904_handle_pdata(codec);
 
+	printk(KERN_ERR "wm8904_probe before wm8904_add_widgets\n");
 	wm8904_add_widgets(codec);
 
 	return 0;
@@ -2172,6 +2192,7 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
 	dev_info(&i2c->dev, "revision %c\n", val + 'A');
 
 	ret = regmap_write(wm8904->regmap, WM8904_SW_RESET_AND_ID, 0);
+	printk(KERN_ERR "wm8904_i2c_probe reset_call\n");
 	if (ret < 0) {
 		dev_err(&i2c->dev, "Failed to issue reset: %d\n", ret);
 		goto err_enable;
@@ -2202,6 +2223,7 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
 			   WM8904_SR_MODE, 0);
 
 	/* Apply configuration from the platform data. */
+	printk(KERN_ERR "wm8904 Apply configuration from the platform data\n");
 	if (wm8904->pdata) {
 		for (i = 0; i < WM8904_GPIO_REGS; i++) {
 			if (!wm8904->pdata->gpio_cfg[i])
@@ -2234,11 +2256,13 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
 	/* Can leave the device powered off until we need it */
 	regcache_cache_only(wm8904->regmap, true);
 	regulator_bulk_disable(ARRAY_SIZE(wm8904->supplies), wm8904->supplies);
-
+	printk(KERN_ERR "wm8904 power off after init\n");
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_wm8904, &wm8904_dai, 1);
-	if (ret != 0)
+	if (ret != 0) {
+		printk(KERN_ERR "wm8904 snd_soc_register_codec return %d\n", ret);
 		return ret;
+	}
 
 	return 0;
 

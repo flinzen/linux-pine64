@@ -78,8 +78,6 @@
 					1104000
 					1152000
 					1200000
-					1248000
-					1296000
 					1344000>;
 			clock-latency = <2000000>;
 			clock-frequency = <1008000000>;
@@ -279,10 +277,10 @@
 
 	dvfs_table: dvfs_table {
 		compatible = "allwinner,dvfs_table";
-		max_freq = <1248000000>;
+		max_freq = <1152000000>;
 		min_freq = <480000000>;
 		lv_count = <8>;
-		lv1_freq = <1248000000>;
+		lv1_freq = <1152000000>;
 		lv1_volt = <1300>;
 		lv2_freq = <1104000000>;
 		lv2_volt = <1260>;
@@ -548,7 +546,13 @@
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&twi1_pins_a>;
 			pinctrl-1 = <&twi1_pins_b>;
-			status = "disabled";
+			status = "okay";
+
+			wm8904_codec: codec@1a {
+				compatible = "wlf,wm8904";
+				reg = <0x1a>;
+				device_type = "codec";
+			};
 		};
 
 		twi2: twi@0x01c2b400{
@@ -769,7 +773,10 @@
 		snddaudio0:sound@1{
 			compatible = "allwinner,sunxi-daudio0-machine";
 			sunxi,daudio0-controller = <&daudio0>;
+			sunxi,audio-codec = <&wm8904_codec>;
+			sunxi,audio-dai-name = "wm8904-hifi";
 			status = "okay";
+			device_type = "snddaudio0";
 		};
 		snddaudio1:sound@2{
 			compatible = "allwinner,sunxi-daudio1-machine";
@@ -967,13 +974,12 @@
 		disp: disp@01000000 {
 			compatible = "allwinner,sun50i-disp";
 			reg = <0x0 0x01000000 0x0 0x00300000>,/*de*/
-				<0x0 0x01c0c000 0x0 0x07fc>,/*tcon0*/
-				<0x0 0x01c0d000 0x0 0x07fc>,/*tcon1*/
+				<0x0 0x01c0c000 0x0 0x17fc>,/*lcd*/
 				<0x0 0x01ca0000 0x0 0x10fc>;/*dsi*/
 			interrupts = <GIC_SPI 86 0x0104>, <GIC_SPI 87 0x0104>,
 				<GIC_SPI 89 0x0104>;/* for dsi */
-			clocks = <&clk_de>,<&clk_tcon0>,<&clk_tcon1>,
-				<&clk_lvds>,<&clk_mipidsi>;
+			clocks = <&clk_de>,<&clk_tcon0>,
+				<&clk_lvds>,<&clk_mipidsi>,<&clk_tcon1>;
 
 			status = "okay";
 		};
@@ -1295,14 +1301,14 @@
 			status = "okay";
 			state_cnt = <10>;
 			cluster_num = <1>;
-			state0 = <1248000 4>;
-			state1 = <1152000 4>;
-			state2 = <1104000 4>;
-			state3 = <1056000 4>;
-			state4 = <1008000 4>;
-			state5 = <960000 4>;
-			state6 = <912000 4>;
-			state7 = <816000 4>;
+			state0 = <1152000 4>;
+			state1 = <1104000 4>;
+			state2 = <1056000 4>;
+			state3 = <1008000 4>;
+			state4 = <960000 4>;
+			state5 = <912000 4>;
+			state6 = <816000 4>;
+			state7 = <648000 4>;
 			state8 = <648000 2>;
 			state9 = <648000 1>;
 		};
