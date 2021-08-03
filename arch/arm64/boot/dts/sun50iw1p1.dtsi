@@ -546,7 +546,13 @@
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&twi1_pins_a>;
 			pinctrl-1 = <&twi1_pins_b>;
-			status = "disabled";
+			status = "okay";
+
+			wm8904_codec: codec@1a {
+				compatible = "wlf,wm8904";
+				reg = <0x1a>;
+				device_type = "codec";
+			};
 		};
 
 		twi2: twi@0x01c2b400{
@@ -767,7 +773,10 @@
 		snddaudio0:sound@1{
 			compatible = "allwinner,sunxi-daudio0-machine";
 			sunxi,daudio0-controller = <&daudio0>;
+			sunxi,audio-codec = <&wm8904_codec>;
+			sunxi,audio-dai-name = "wm8904-hifi";
 			status = "okay";
+			device_type = "snddaudio0";
 		};
 		snddaudio1:sound@2{
 			compatible = "allwinner,sunxi-daudio1-machine";

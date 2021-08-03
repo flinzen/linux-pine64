@@ -4051,7 +4051,7 @@ int snd_soc_register_codec(struct device *dev,
 	struct snd_soc_codec *codec;
 	int ret, i;
 
-	dev_dbg(dev, "codec register %s\n", dev_name(dev));
+	dev_info(dev, "codec register %s\n", dev_name(dev));
 
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
 	if (codec == NULL)
@@ -4130,7 +4130,7 @@ int snd_soc_register_codec(struct device *dev,
 		goto fail_codec_name;
 	}
 
-	dev_dbg(codec->dev, "ASoC: Registered codec '%s'\n", codec->name);
+	dev_info(codec->dev, "ASoC: Registered codec '%s'\n", codec->name);
 	return 0;
 
 fail_codec_name:

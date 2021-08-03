@@ -37,6 +37,7 @@ static enum power_supply_property axp_battery_props[] = {
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
+	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
@@ -96,10 +97,14 @@ static s32 axp_battery_get_property(struct power_supply *psy,
 {
 	struct axp_charger *charger;
 	s32 ret = 0;
-
+	u8 reg_value = 0;
 	charger = container_of(psy, struct axp_charger, batt);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
+		axp_read(charger->master, AXP81X_LDO_DC_EN1, &reg_value);
+		val->intval = reg_value & 0x1;
+		break;
 	case POWER_SUPPLY_PROP_STATUS:
 		axp_battery_check_status(charger, val);
 		break;
@@ -155,6 +160,31 @@ static s32 axp_battery_get_property(struct power_supply *psy,
 	}
 
 	return ret;
+}
+
+static s32 axp_battery_set_property(struct power_supply *psy,
+           enum power_supply_property psp,
+           const union power_supply_propval *val)
+{
+	struct axp_charger *charger;
+	s32 ret = 0;
+	u8 reg_value = 0;
+	charger = container_of(psy, struct axp_charger, batt);
+	switch(psp) {
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
+		axp_write(charger->master, AXP81X_LDO_DC_EN1, val->intval&0x1);
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static s32 axp_battery_property_is_writable(struct power_supply *psy,
+           enum power_supply_property psp)
+{
+	return psp == POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX;
 }
 
 static s32 axp_ac_get_property(struct power_supply *psy,
@@ -224,6 +254,8 @@ static void axp_battery_setup_psy(struct axp_charger *charger)
 	batt->use_for_apm = info->use_for_apm;
 	batt->type = POWER_SUPPLY_TYPE_BATTERY;
 	batt->get_property = axp_battery_get_property;
+	batt->set_property = axp_battery_set_property;
+	batt->property_is_writeable = axp_battery_property_is_writable;
 	batt->properties = axp_battery_props;
 	batt->num_properties = ARRAY_SIZE(axp_battery_props);
 

@@ -51,39 +51,47 @@ static int sunxi_snddaudio0_hw_params(struct snd_pcm_substream *substream,
 			freq = 24576000;
 			break;
 	}
+	pr_info("[daudio0]sample rate %ld\n", sample_rate);
 
 	/*set system clock source freq and set the mode as daudio or pcm*/
 	ret = snd_soc_dai_set_sysclk(cpu_dai, 0 , freq, 0);
 	if (ret < 0) {
+		pr_warn("[daudio0]set sysclk failed %d\n", ret);
 		return ret;
 	}
 
 	/*set system clock source freq and set the mode as daudio or pcm*/
-	ret = snd_soc_dai_set_sysclk(codec_dai, 0 , freq, 0);
+
+	ret = snd_soc_dai_set_sysclk(codec_dai, 1, freq, 0);
+	pr_info("[daudio0], codec_dai_name %s\n", codec_dai->name);
+	pr_info("[daudio0], codec_dai_probed %d\n", codec_dai->probed);
 	if (ret < 0) {
-		pr_warn("[daudio0],the codec_dai set set_sysclk failed.\n");
+		pr_warn("[daudio0],the codec_dai set set_sysclk failed%d\n", ret);
 	}
 
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
 						SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0) {
-		pr_warn("[daudio0],the codec_dai set set_fmt failed.\n");
+		pr_warn("[daudio0],the codec_dai set set_fmt failed%d\n", ret);
 	}
 	/*
 	* codec clk & FRM master. AP as slave
 	*/
 	ret = snd_soc_dai_set_fmt(cpu_dai, (sunxi_daudio->audio_format| (sunxi_daudio->signal_inversion <<8) | (sunxi_daudio->daudio_master <<12)));
 	if (ret < 0) {
+		pr_warn("[daudio0]set fmt cpu_dai failed %d\n", ret);
 		return ret;
 	}
 
 	ret = snd_soc_dai_set_clkdiv(cpu_dai, 0, sample_rate);
 	if (ret < 0) {
+		pr_warn("[daudio0]set cpu_dai clkdiv failed %d\n", ret);
 		return ret;
 	}
+
 	ret = snd_soc_dai_set_clkdiv(codec_dai, 0, sample_rate);
 	if (ret < 0) {
-		pr_warn("[daudio0],the codec_dai set set_clkdiv failed.\n");
+		pr_warn("[daudio0],the codec_dai set set_clkdiv failed%d\n", ret);
 	}
 
 	return 0;
@@ -102,7 +110,7 @@ static struct snd_soc_ops sunxi_snddaudio_ops = {
 };
 
 static struct snd_soc_dai_link sunxi_snddaudio_dai_link = {
-	.name 			= "sysvoice",
+	.name 			= "hifi",
 	.stream_name 	= "SUNXI-TDM0",
 	.cpu_dai_name 	= "sunxi-daudio",
 	.init 			= sunxi_daudio_init,
@@ -122,6 +130,9 @@ static int  sunxi_snddaudio0_dev_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct device_node *np = pdev->dev.of_node;
 	struct snd_soc_card *card = &snd_soc_sunxi_snddaudio;
+
+	pr_info("[daudio0]probe start\n");
+
 	card->dev = &pdev->dev;
 	sunxi_snddaudio_dai_link.cpu_dai_name = NULL;
 	sunxi_snddaudio_dai_link.cpu_of_node = of_parse_phandle(np,
@@ -134,16 +145,35 @@ static int  sunxi_snddaudio0_dev_probe(struct platform_device *pdev)
 	sunxi_snddaudio_dai_link.platform_name = NULL;
 	sunxi_snddaudio_dai_link.platform_of_node = sunxi_snddaudio_dai_link.cpu_of_node;
 
-	if (sunxi_snddaudio_dai_link.codec_dai_name == NULL
-			&& sunxi_snddaudio_dai_link.codec_name == NULL){
+	sunxi_snddaudio_dai_link.codec_of_node = of_parse_phandle(np,"sunxi,audio-codec", 0);
+
+	pr_info("[daudio0]codec_of_node: %s\n", sunxi_snddaudio_dai_link.codec_of_node->name);
+
+	if (of_property_read_string_index(np, "sunxi,audio-dai-name", 0,
+					  &sunxi_snddaudio_dai_link.codec_dai_name) < 0)
+	{
+	    sunxi_snddaudio_dai_link.codec_dai_name = NULL;
+	}
+
+	if (sunxi_snddaudio_dai_link.codec_dai_name == NULL &&
+	    sunxi_snddaudio_dai_link.codec_name == NULL) {
+	    	sunxi_snddaudio_dai_link.codec_of_node = NULL;
 			codec_utils_probe(pdev);
 			sunxi_snddaudio_dai_link.codec_dai_name = pdev->name;
 			sunxi_snddaudio_dai_link.codec_name 	= pdev->name;
+	}
+	if (sunxi_snddaudio_dai_link.codec_name) {
+	    pr_info("[daudio0]codec name %s\n", sunxi_snddaudio_dai_link.codec_name);
+	}
+	if (sunxi_snddaudio_dai_link.codec_dai_name) {
+	    pr_info("[daudio0]codec dai name %s\n", sunxi_snddaudio_dai_link.codec_dai_name);
 	}
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card() failed: %d\n", ret);
 	}
+
+	pr_info("[daudio0]probe %d\n", ret);
 
 	return ret;
 }
