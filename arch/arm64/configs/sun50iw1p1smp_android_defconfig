@@ -2950,7 +2950,7 @@ CONFIG_HFSPLUS_FS=y
 # CONFIG_BEFS_FS is not set
 # CONFIG_BFS_FS is not set
 # CONFIG_EFS_FS is not set
-# CONFIG_LOGFS is not set
+CONFIG_LOGFS=y
 CONFIG_CRAMFS=y
 # CONFIG_SQUASHFS is not set
 # CONFIG_VXFS_FS is not set

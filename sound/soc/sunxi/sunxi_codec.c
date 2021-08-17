@@ -2525,6 +2525,7 @@ static int __exit sunxi_internal_codec_remove(struct platform_device *pdev)
 
 static void sunxi_internal_codec_shutdown(struct platform_device *pdev)
 {
+	return;
 	struct sunxi_codec * sunxi_internal_codec = dev_get_drvdata(&pdev->dev);
 
 	snd_soc_update_bits(sunxi_internal_codec->codec, HP_CTRL, (0x1<<HPPA_EN), (0x0<<HPPA_EN));

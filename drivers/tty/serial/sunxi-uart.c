@@ -1357,7 +1357,7 @@ static int sw_uart_remove(struct platform_device *pdev)
 
 static int sw_uart_suspend(struct device *dev)
 {
-	struct uart_port *port = dev_get_drvdata(dev);
+	/*struct uart_port *port = dev_get_drvdata(dev);
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 
 	if (port) {
@@ -1369,7 +1369,7 @@ static int sw_uart_suspend(struct device *dev)
 			sw_uart_regulator_disable(dev->platform_data);
 		}
 	}
-
+	*/
 	return 0;
 }
 
