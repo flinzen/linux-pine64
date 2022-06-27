@@ -38,6 +38,7 @@ static enum power_supply_property axp_battery_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX,
+	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
@@ -104,6 +105,10 @@ static s32 axp_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
 		axp_read(charger->master, AXP81X_LDO_DC_EN1, &reg_value);
 		val->intval = reg_value & 0x1;
+		break;
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
+		axp_read(charger->master, AXP81X_CHARGE1, &reg_value);
+		val->intval = ((reg_value & 0xF) + 1) * 200000;
 		break;
 	case POWER_SUPPLY_PROP_STATUS:
 		axp_battery_check_status(charger, val);
@@ -173,6 +178,11 @@ static s32 axp_battery_set_property(struct power_supply *psy,
 	switch(psp) {
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
 		axp_write(charger->master, AXP81X_LDO_DC_EN1, val->intval&0x1);
+		break;
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
+		axp_read(charger->master, AXP81X_CHARGE1, &reg_value);
+		reg_value = (reg_value & 0xF0) | (val->intval & 0xF);
+		axp_write(charger->master, AXP81X_CHARGE1, reg_value);
 		break;
 	default:
 		ret = -EINVAL;

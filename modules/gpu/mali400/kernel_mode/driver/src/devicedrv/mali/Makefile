@@ -100,8 +100,8 @@ $(warning MALI_PLATFORM $(MALI_PLATFORM))
 endif
 
 # Set up build config
-export CONFIG_MALI400=m
-export CONFIG_MALI450=y
+export CONFIG_MALI400=y
+export CONFIG_MALI450=m
 
 export EXTRA_DEFINES += -DCONFIG_MALI400=1
 export EXTRA_DEFINES += -DCONFIG_MALI450=1

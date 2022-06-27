@@ -15,8 +15,8 @@
  *
  */
 
-/* #define DEBUG */
-/* #define VERBOSE_DEBUG */
+#define DEBUG
+#define VERBOSE_DEBUG
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -38,7 +38,7 @@
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
 #endif
-#define MTP_BULK_BUFFER_SIZE       1024
+#define MTP_BULK_BUFFER_SIZE       16384
 #define INTR_BUFFER_SIZE           28
 
 /* String IDs */
@@ -473,12 +473,14 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 	int ret = 0;
 
 	DBG(cdev, "mtp_read(%zu)\n", count);
+	printk(KERN_ERR "mtp_read(%zu)\n", count);
 
 	if (count > MTP_BULK_BUFFER_SIZE)
 		return -EINVAL;
 
 	/* we will block until we're online */
 	DBG(cdev, "mtp_read: waiting for online state\n");
+	printk(KERN_ERR "mtp_read: waiting for online state\n");
 	ret = wait_event_interruptible(dev->read_wq,
 		dev->state != STATE_OFFLINE);
 	if (ret < 0) {
@@ -506,6 +508,7 @@ requeue_req:
 		goto done;
 	} else {
 		DBG(cdev, "rx %p queue\n", req);
+		printk(KERN_ERR "rx %p queue\n", req);
 	}
 
 	/* wait for a request to complete */
@@ -521,6 +524,7 @@ requeue_req:
 			goto requeue_req;
 
 		DBG(cdev, "rx %p %d\n", req, req->actual);
+		printk(KERN_ERR "rx %p %d\n", req, req->actual);
 		xfer = (req->actual < count) ? req->actual : count;
 		r = xfer;
 		if (copy_to_user(buf, req->buf, xfer))
@@ -537,6 +541,7 @@ done:
 	spin_unlock_irq(&dev->lock);
 
 	DBG(cdev, "mtp_read returning %zd\n", r);
+	printk(KERN_ERR "mtp_read returning %zd\n", r);
 	return r;
 }
 
