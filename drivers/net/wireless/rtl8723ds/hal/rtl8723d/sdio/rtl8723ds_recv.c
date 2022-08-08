@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,14 +11,36 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- *****************************************************************************/
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
+ ******************************************************************************/
 #define _RTL8723DS_RECV_C_
 
 #include <rtl8723d_hal.h>
 
-#ifdef CONFIG_SDIO_RX_COPY
-s32 rtl8723ds_recv_hdl(_adapter *padapter)
+
+static s32 initrecvbuf(struct recv_buf *precvbuf, PADAPTER padapter)
 {
+	_rtw_init_listhead(&precvbuf->list);
+	_rtw_spinlock_init(&precvbuf->recvbuf_lock);
+
+	precvbuf->adapter = padapter;
+
+	return _SUCCESS;
+}
+
+static void freerecvbuf(struct recv_buf *precvbuf)
+{
+	_rtw_spinlock_free(&precvbuf->recvbuf_lock);
+}
+
+#ifdef CONFIG_SDIO_RX_COPY
+static void rtl8723ds_recv_tasklet(void *priv)
+{
+	PADAPTER			padapter;
 	PHAL_DATA_TYPE		pHalData;
 	struct recv_priv		*precvpriv;
 	struct recv_buf	*precvbuf;
@@ -29,6 +51,8 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 	u32	pkt_len, pkt_offset;
 	u8	rx_report_sz = 0;
 
+
+	padapter = (PADAPTER)priv;
 	pHalData = GET_HAL_DATA(padapter);
 	precvpriv = &padapter->recvpriv;
 
@@ -44,7 +68,11 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 			if (precvframe == NULL) {
 				RTW_INFO("%s: no enough recv frame!\n", __FUNCTION__);
 				rtw_enqueue_recvbuf_to_head(precvbuf, &precvpriv->recv_buf_pending_queue);
-				return RTW_RFRAME_UNAVAIL;
+
+				/* The case of can't allocate recvframe should be temporary, */
+				/* schedule again and hope recvframe is available next time. */
+				tasklet_schedule(&precvpriv->recv_tasklet);
+				return;
 			}
 
 			/* rx desc parsing */
@@ -53,7 +81,7 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 			pattrib = &precvframe->u.hdr.attrib;
 
 			/* fix Hardware RX data error, drop whole recv_buffer */
-			if (!rtw_hal_rcr_check(padapter, RCR_ACRC32) && pattrib->crc_err) {
+			if ((!(pHalData->ReceiveConfig & RCR_ACRC32)) && pattrib->crc_err) {
 #if !(MP_DRIVER == 1)
 				RTW_INFO("%s()-%d: RX Warning! rx CRC ERROR !!\n", __FUNCTION__, __LINE__);
 #endif
@@ -86,7 +114,7 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 			} else {
 #ifdef CONFIG_RX_PACKET_APPEND_FCS
 				if (check_fwstate(&padapter->mlmepriv, WIFI_MONITOR_STATE) == _FALSE)
-					if ((pattrib->pkt_rpt_type == NORMAL_RX) && rtw_hal_rcr_check(padapter, RCR_APPFCS))
+					if ((pattrib->pkt_rpt_type == NORMAL_RX) && (pHalData->ReceiveConfig & RCR_APPFCS))
 						pattrib->pkt_len -= IEEE80211_FCS_LEN;
 #endif
 
@@ -101,7 +129,7 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 				ptr += RXDESC_SIZE;
 
 				/* update drv info */
-				if (rtw_hal_rcr_check(padapter, RCR_APP_BA_SSN)) {
+				if (pHalData->ReceiveConfig & RCR_APP_BA_SSN) {
 					/* rtl8723s_update_bassn(padapter, pdrvinfo); */
 					ptr += 4;
 				}
@@ -114,8 +142,14 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 						break;
 					}
 
-					pre_recv_entry(precvframe, pattrib->physt ? ptr : NULL);
+#ifdef CONFIG_CONCURRENT_MODE
+					pre_recv_entry(precvframe, ptr);
+#endif
 
+					if (pattrib->physt)
+						rx_query_phy_status(precvframe, ptr);
+
+					rtw_recv_entry(precvframe);
 				} else {
 #ifdef CONFIG_FW_C2H_PKT
 					if (pattrib->pkt_rpt_type == C2H_PACKET)
@@ -138,43 +172,6 @@ s32 rtl8723ds_recv_hdl(_adapter *padapter)
 		rtw_enqueue_recvbuf(precvbuf, &precvpriv->free_recv_buf_queue);
 	} while (1);
 
-#ifdef CONFIG_RTW_NAPI
-#ifdef CONFIG_RTW_NAPI_V2
-	if (padapter->registrypriv.en_napi) {
-		struct dvobj_priv *d;
-		struct _ADAPTER *a;
-		u8 i;
-
-		d = adapter_to_dvobj(padapter);
-		for (i = 0; i < d->iface_nums; i++) {
-			a = d->padapters[i];
-			precvpriv = &a->recvpriv;
-			if (rtw_if_up(a) == _TRUE
-				&& skb_queue_len(&precvpriv->rx_napi_skb_queue))
-				napi_schedule(&a->napi);
-	
-		}
-	}
-#endif /* CONFIG_RTW_NAPI_V2 */
-#endif /* CONFIG_RTW_NAPI */
-	
-	return _SUCCESS;
-}
-
-static void rtl8723ds_recv_tasklet(void *priv)
-{
-	_adapter *adapter = (_adapter *)priv;
-	s32 ret;
-
-	ret = rtl8723ds_recv_hdl(adapter);
-	if (ret == RTW_RFRAME_UNAVAIL
-		|| ret == RTW_RFRAME_PKT_UNAVAIL
-	) {
-		/* schedule again and hope recvframe/packet is available next time. */
-		#ifdef PLATFORM_LINUX
-		tasklet_schedule(&adapter->recvpriv.recv_tasklet);
-		#endif
-	}
 }
 #else
 static void rtl8723ds_recv_tasklet(void *priv)
@@ -208,9 +205,7 @@ static void rtl8723ds_recv_tasklet(void *priv)
 
 				/* The case of can't allocate recvframe should be temporary, */
 				/* schedule again and hope recvframe is available next time. */
-#ifdef PLATFORM_LINUX
 				tasklet_schedule(&precvpriv->recv_tasklet);
-#endif
 				return;
 			}
 
@@ -247,7 +242,7 @@ static void rtl8723ds_recv_tasklet(void *priv)
 #endif
 
 			/* fix Hardware RX data error, drop whole recv_buffer */
-			if (!rtw_hal_rcr_check(padapter, RCR_ACRC32) && pattrib->crc_err) {
+			if ((!(pHalData->ReceiveConfig & RCR_ACRC32)) && pattrib->crc_err) {
 				RTW_INFO("%s()-%d: RX Warning! rx CRC ERROR !!\n", __FUNCTION__, __LINE__);
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 				break;
@@ -284,9 +279,7 @@ static void rtl8723ds_recv_tasklet(void *priv)
 					/* The case of can't allocate skb is serious and may never be recovered, */
 					/* once bDriverStopped is enable, this task should be stopped. */
 					if (!rtw_is_drv_stopped(padapter)) {
-#ifdef PLATFORM_LINUX
 						tasklet_schedule(&precvpriv->recv_tasklet);
-#endif
 					}
 
 					return;
@@ -303,7 +296,7 @@ static void rtl8723ds_recv_tasklet(void *priv)
 
 #ifdef CONFIG_RX_PACKET_APPEND_FCS
 				if (check_fwstate(&padapter->mlmepriv, WIFI_MONITOR_STATE) == _FALSE) {
-					if ((pattrib->pkt_rpt_type == NORMAL_RX) && rtw_hal_rcr_check(padapter, RCR_APPFCS)) {
+					if ((pattrib->pkt_rpt_type == NORMAL_RX) && (pHalData->ReceiveConfig & RCR_APPFCS)) {
 						recvframe_pull_tail(precvframe, IEEE80211_FCS_LEN);
 						pattrib->pkt_len -= IEEE80211_FCS_LEN;
 						ppkt->len = pattrib->pkt_len;
@@ -315,14 +308,21 @@ static void rtl8723ds_recv_tasklet(void *priv)
 				ptr += RXDESC_SIZE;
 
 				/* update drv info */
-				if (rtw_hal_rcr_check(padapter, RCR_APP_BA_SSN)) {
+				if (pHalData->ReceiveConfig & RCR_APP_BA_SSN) {
 					/* rtl8723s_update_bassn(padapter, pdrvinfo); */
 					ptr += 4;
 				}
 
-				if (pattrib->pkt_rpt_type == NORMAL_RX)
-					pre_recv_entry(precvframe, pattrib->physt ? ptr : NULL);
-				else {
+				if (pattrib->pkt_rpt_type == NORMAL_RX) {
+#ifdef CONFIG_CONCURRENT_MODE
+					pre_recv_entry(precvframe, ptr);
+#endif /*CONFIG_CONCURRENT_MODE*/
+
+					if (pattrib->physt)
+						rx_query_phy_status(precvframe, ptr);
+
+					rtw_recv_entry(precvframe);
+				} else {
 #ifdef CONFIG_FW_C2H_PKT
 					if (pattrib->pkt_rpt_type == C2H_PACKET)
 						rtw_hal_c2h_pkt_pre_hdl(padapter, precvframe->u.hdr.rx_data, pattrib->pkt_len);
@@ -355,7 +355,6 @@ static void rtl8723ds_recv_tasklet(void *priv)
  */
 s32 rtl8723ds_init_recv_priv(PADAPTER padapter)
 {
-	struct registry_priv *regsty = adapter_to_regsty(padapter);
 	s32			res;
 	u32			i, n;
 	struct recv_priv	*precvpriv;
@@ -369,7 +368,7 @@ s32 rtl8723ds_init_recv_priv(PADAPTER padapter)
 	_rtw_init_queue(&precvpriv->free_recv_buf_queue);
 	_rtw_init_queue(&precvpriv->recv_buf_pending_queue);
 
-	n = regsty->recvbuf_nr * sizeof(struct recv_buf) + 4;
+	n = NR_RECVBUFF * sizeof(struct recv_buf) + 4;
 	precvpriv->pallocated_recv_buf = rtw_zmalloc(n);
 	if (precvpriv->pallocated_recv_buf == NULL) {
 		res = _FAIL;
@@ -380,16 +379,36 @@ s32 rtl8723ds_init_recv_priv(PADAPTER padapter)
 
 	/* init each recv buffer */
 	precvbuf = (struct recv_buf *)precvpriv->precv_buf;
-	for (i = 0; i < regsty->recvbuf_nr; i++) {
-		res = sdio_initrecvbuf(precvbuf, padapter);
+	for (i = 0; i < NR_RECVBUFF; i++) {
+		res = initrecvbuf(precvbuf, padapter);
 		if (res == _FAIL)
 			break;
 
-		res = rtw_os_recvbuf_resource_alloc(padapter, precvbuf, MAX_RECVBUF_SZ);
+		res = rtw_os_recvbuf_resource_alloc(padapter, precvbuf);
 		if (res == _FAIL) {
-			sdio_freerecvbuf(precvbuf);
+			freerecvbuf(precvbuf);
 			break;
 		}
+
+#ifdef CONFIG_SDIO_RX_COPY
+		if (precvbuf->pskb == NULL) {
+			SIZE_PTR tmpaddr = 0;
+			SIZE_PTR alignment = 0;
+
+			precvbuf->pskb = rtw_skb_alloc(MAX_RECVBUF_SZ + RECVBUFF_ALIGN_SZ);
+
+			if (precvbuf->pskb) {
+				precvbuf->pskb->dev = padapter->pnetdev;
+
+				tmpaddr = (SIZE_PTR)precvbuf->pskb->data;
+				alignment = tmpaddr & (RECVBUFF_ALIGN_SZ - 1);
+				skb_reserve(precvbuf->pskb, (RECVBUFF_ALIGN_SZ - alignment));
+			}
+
+			if (precvbuf->pskb == NULL)
+				RTW_INFO("%s: alloc_skb fail!\n", __FUNCTION__);
+		}
+#endif
 
 		rtw_list_insert_tail(&precvbuf->list, &precvpriv->free_recv_buf_queue.queue);
 
@@ -401,11 +420,9 @@ s32 rtl8723ds_init_recv_priv(PADAPTER padapter)
 		goto initbuferror;
 
 	/* 3 2. init tasklet */
-#ifdef PLATFORM_LINUX
 	tasklet_init(&precvpriv->recv_tasklet,
-		     (void(*)(unsigned long))rtl8723ds_recv_tasklet,
+		     (void *)rtl8723ds_recv_tasklet,
 		     (unsigned long)padapter);
-#endif
 
 	goto exit;
 
@@ -417,14 +434,14 @@ initbuferror:
 		for (i = 0; i < n ; i++) {
 			rtw_list_delete(&precvbuf->list);
 			rtw_os_recvbuf_resource_free(padapter, precvbuf);
-			sdio_freerecvbuf(precvbuf);
+			freerecvbuf(precvbuf);
 			precvbuf++;
 		}
 		precvpriv->precv_buf = NULL;
 	}
 
 	if (precvpriv->pallocated_recv_buf) {
-		n = regsty->recvbuf_nr * sizeof(struct recv_buf) + 4;
+		n = NR_RECVBUFF * sizeof(struct recv_buf) + 4;
 		rtw_mfree(precvpriv->pallocated_recv_buf, n);
 		precvpriv->pallocated_recv_buf = NULL;
 	}
@@ -441,7 +458,6 @@ exit:
  */
 void rtl8723ds_free_recv_priv(PADAPTER padapter)
 {
-	struct registry_priv *regsty = &padapter->registrypriv;
 	u32			i, n;
 	struct recv_priv	*precvpriv;
 	struct recv_buf		*precvbuf;
@@ -450,26 +466,24 @@ void rtl8723ds_free_recv_priv(PADAPTER padapter)
 	precvpriv = &padapter->recvpriv;
 
 	/* 3 1. kill tasklet */
-#ifdef PLATFORM_LINUX
 	tasklet_kill(&precvpriv->recv_tasklet);
-#endif
 
 	/* 3 2. free all recv buffers */
 	precvbuf = (struct recv_buf *)precvpriv->precv_buf;
 	if (precvbuf) {
-		n = regsty->recvbuf_nr;
+		n = NR_RECVBUFF;
 		precvpriv->free_recv_buf_queue_cnt = 0;
 		for (i = 0; i < n ; i++) {
 			rtw_list_delete(&precvbuf->list);
 			rtw_os_recvbuf_resource_free(padapter, precvbuf);
-			sdio_freerecvbuf(precvbuf);
+			freerecvbuf(precvbuf);
 			precvbuf++;
 		}
 		precvpriv->precv_buf = NULL;
 	}
 
 	if (precvpriv->pallocated_recv_buf) {
-		n = regsty->recvbuf_nr * sizeof(struct recv_buf) + 4;
+		n = NR_RECVBUFF * sizeof(struct recv_buf) + 4;
 		rtw_mfree(precvpriv->pallocated_recv_buf, n);
 		precvpriv->pallocated_recv_buf = NULL;
 	}

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,17 +11,23 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- *****************************************************************************/
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
+ ******************************************************************************/
 #ifndef __RTL8188F_RECV_H__
 #define __RTL8188F_RECV_H__
 
 #if defined(CONFIG_USB_HCI)
 	#ifndef MAX_RECVBUF_SZ
-
 		#ifdef CONFIG_MINIMAL_MEMORY_USAGE
 			#define MAX_RECVBUF_SZ (4000) /* about 4K */
 		#else
-			#ifdef CONFIG_PLATFORM_HISILICON
+			#ifdef CONFIG_PLATFORM_MSTAR
+				#define MAX_RECVBUF_SZ (8192) /* 8K */
+			#elif defined(CONFIG_PLATFORM_HISILICON)
 				#define MAX_RECVBUF_SZ (16384) /* 16k */
 			#else
 				#define MAX_RECVBUF_SZ (32768) /* 32k */
@@ -35,8 +41,7 @@
 #elif defined(CONFIG_PCI_HCI)
 	#define MAX_RECVBUF_SZ (4000) /* about 4K */
 #elif defined(CONFIG_SDIO_HCI)
-	/* minmum 4K, multiple of 8-byte is required, multiple of sdio block size is prefered */
-	#define MAX_RECVBUF_SZ _RND(RX_DMA_BOUNDARY_8188F + 1, 8)
+	#define MAX_RECVBUF_SZ (RX_DMA_BOUNDARY_8188F + 1)
 #endif /* CONFIG_SDIO_HCI */
 
 /* Rx smooth factor */
@@ -45,7 +50,6 @@
 #if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
 s32 rtl8188fs_init_recv_priv(PADAPTER padapter);
 void rtl8188fs_free_recv_priv(PADAPTER padapter);
-s32 rtl8188fs_recv_hdl(_adapter *padapter);
 #endif
 
 #ifdef CONFIG_USB_HCI

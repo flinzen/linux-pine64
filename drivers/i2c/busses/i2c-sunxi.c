@@ -35,6 +35,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/of_i2c.h>
+#include <linux/pn5xx_i2c.h>
 
 #include "i2c-sunxi.h"
 
@@ -1384,9 +1385,10 @@ static struct platform_driver sunxi_i2c_driver = {
 
 static int __init sunxi_i2c_adap_init(void)
 {
+	int ret;
 	I2C_DBG("Sunxi I2C adapt init\n");
-
-	return platform_driver_register(&sunxi_i2c_driver);
+	ret = platform_driver_register(&sunxi_i2c_driver);
+	return ret;
 }
 
 static void __exit sunxi_i2c_adap_exit(void)

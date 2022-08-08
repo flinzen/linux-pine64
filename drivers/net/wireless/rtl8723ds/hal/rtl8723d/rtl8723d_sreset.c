@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,7 +11,12 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- *****************************************************************************/
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
+ ******************************************************************************/
 #define _RTL8723D_SRESET_C_
 
 #include <rtl8723d_hal.h>
@@ -23,7 +28,7 @@ void rtl8723d_sreset_xmit_status_check(_adapter *padapter)
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
 	struct sreset_priv *psrtpriv = &pHalData->srestpriv;
 
-	systime current_time;
+	unsigned long current_time;
 	struct xmit_priv	*pxmitpriv = &padapter->xmitpriv;
 	unsigned int diff_time;
 	u32 txdma_status;
@@ -50,13 +55,15 @@ void rtl8723d_sreset_xmit_status_check(_adapter *padapter)
 			else {
 				diff_time = rtw_get_passing_time_ms(psrtpriv->last_tx_complete_time);
 				if (diff_time > 4000) {
+					u32 ability = 0;
 
 					/* padapter->Wifi_Error_Status = WIFI_TX_HANG; */
-					RTW_INFO("%s tx hang %s\n", __FUNCTION__,
-						!adapter_to_rfctl(padapter)->adaptivity_en ? "" :
-							rtw_edcca_mode_str(rtw_get_edcca_mode(adapter_to_dvobj(padapter), pHalData->current_band_type)));
+					ability = rtw_phydm_ability_get(padapter);
 
-					if (!adapter_to_rfctl(padapter)->adaptivity_en)
+					RTW_INFO("%s tx hang %s\n", __FUNCTION__,
+						(ability & ODM_BB_ADAPTIVITY) ? "ODM_BB_ADAPTIVITY" : "");
+
+					if (!(ability & ODM_BB_ADAPTIVITY))
 						rtw_hal_sreset_reset(padapter);
 				}
 			}

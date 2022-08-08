@@ -19,6 +19,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/io.h>
+#include <linux/pn5xx_i2c.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -144,6 +145,7 @@ static const char * const sunxi_board_dt_compat[] = {
 	"arm,sun8iw11p1",
 	NULL,
 };
+
 
 DT_MACHINE_START(SUNXI_DT, "Allwinner Soc (Device Tree)")
 	.init_machine	= sunxi_dt_init,

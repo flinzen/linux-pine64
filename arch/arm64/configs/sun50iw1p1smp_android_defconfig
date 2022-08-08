@@ -881,6 +881,7 @@ CONFIG_RFKILL_REGULATOR=y
 # CONFIG_CAIF is not set
 # CONFIG_CEPH_LIB is not set
 # CONFIG_NFC is not set
+CONFIG_NFC_NXP_PN5XX=m
 
 #
 # Device Drivers

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,7 +11,12 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- *****************************************************************************/
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
+ ******************************************************************************/
 #ifndef __RTL8703B_XMIT_H__
 #define __RTL8703B_XMIT_H__
 
@@ -184,14 +189,13 @@
 	#define SET_TX_DESC_ANTSEL_D_8703B(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+24, 25, 3, __Value)
 
 	/* Dword 7 */
-	#ifdef CONFIG_PCI_HCI
+	#if (DEV_BUS_TYPE == RT_PCI_INTERFACE)
 		#define SET_TX_DESC_TX_BUFFER_SIZE_8703B(__pTxDesc, __Value)		SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 0, 16, __Value)
-	#endif /*CONFIG_PCI_HCI*/
-	#if defined(CONFIG_SDIO_HCI) || defined(CONFIG_USB_HCI)
+	#else
 		#define SET_TX_DESC_TX_DESC_CHECKSUM_8703B(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 0, 16, __Value)
 	#endif
 	#define SET_TX_DESC_USB_TXAGG_NUM_8703B(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 24, 8, __Value)
-	#ifdef CONFIG_SDIO_HCI
+	#if (DEV_BUS_TYPE == RT_SDIO_INTERFACE)
 		#define SET_TX_DESC_SDIO_TXSEQ_8703B(__pTxDesc, __Value)			SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 16, 8, __Value)
 	#endif
 
@@ -286,17 +290,15 @@
 
 void rtl8703b_update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem);
 void rtl8703b_fill_fake_txdesc(PADAPTER padapter, u8 *pDesc, u32 BufferLen, u8 IsPsPoll, u8 IsBTQosNull, u8 bDataFrame);
-void fill_txdesc_force_bmc_camid(struct pkt_attrib *pattrib, u8 *ptxdesc);
-void fill_txdesc_bmc_tx_rate(struct pkt_attrib *pattrib, u8 *ptxdesc);
+#if defined(CONFIG_CONCURRENT_MODE)
+	void fill_txdesc_force_bmc_camid(struct pkt_attrib *pattrib, u8 *ptxdesc);
+#endif
 
 #if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
 	s32 rtl8703bs_init_xmit_priv(PADAPTER padapter);
 	void rtl8703bs_free_xmit_priv(PADAPTER padapter);
 	s32 rtl8703bs_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe);
 	s32 rtl8703bs_mgnt_xmit(PADAPTER padapter, struct xmit_frame *pmgntframe);
-#ifdef CONFIG_RTW_MGMT_QUEUE
-	s32 rtl8703bs_hal_mgmt_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
-#endif
 	s32	rtl8703bs_hal_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
 	s32 rtl8703bs_xmit_buf_handler(PADAPTER padapter);
 	thread_return rtl8703bs_xmit_thread(thread_context context);
@@ -312,9 +314,6 @@ void fill_txdesc_bmc_tx_rate(struct pkt_attrib *pattrib, u8 *ptxdesc);
 	void rtl8703bu_free_xmit_priv(PADAPTER padapter);
 	s32 rtl8703bu_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe);
 	s32 rtl8703bu_mgnt_xmit(PADAPTER padapter, struct xmit_frame *pmgntframe);
-#ifdef CONFIG_RTW_MGMT_QUEUE
-	s32 rtl8703bu_hal_mgmt_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
-#endif
 	s32	 rtl8703bu_hal_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
 	/* s32 rtl8812au_xmit_buf_handler(PADAPTER padapter); */
 	void rtl8703bu_xmit_tasklet(void *priv);
@@ -329,9 +328,6 @@ void fill_txdesc_bmc_tx_rate(struct pkt_attrib *pattrib, u8 *ptxdesc);
 	void	rtl8703be_xmitframe_resume(_adapter *padapter);
 	s32 rtl8703be_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe);
 	s32 rtl8703be_mgnt_xmit(PADAPTER padapter, struct xmit_frame *pmgntframe);
-#ifdef CONFIG_RTW_MGMT_QUEUE
-	s32 rtl8703be_hal_mgmt_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
-#endif
 	s32	rtl8703be_hal_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
 	void rtl8703be_xmit_tasklet(void *priv);
 #endif

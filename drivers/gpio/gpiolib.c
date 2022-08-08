@@ -123,10 +123,12 @@ static int gpio_chip_hwgpio(const struct gpio_desc *desc)
  */
 static struct gpio_desc *gpio_to_desc(unsigned gpio)
 {
-	if (WARN(!gpio_is_valid(gpio), "invalid GPIO %d\n", gpio))
+	if (WARN(!gpio_is_valid(gpio), "invalid GPIO %d\n", gpio)) {
 		return NULL;
-	else
+	}
+	else {
 		return &gpio_desc[gpio];
+	}
 }
 
 /**
@@ -1724,12 +1726,16 @@ static int gpiod_direction_output(struct gpio_desc *desc, int value)
 	}
 
 	/* Open drain pin should not be driven to 1 */
-	if (value && test_bit(FLAG_OPEN_DRAIN,  &desc->flags))
+	if (value && test_bit(FLAG_OPEN_DRAIN,  &desc->flags)) {
+		pr_err("open drain first");
 		return gpiod_direction_input(desc);
+	}
 
 	/* Open source pin should not be driven to 0 */
-	if (!value && test_bit(FLAG_OPEN_SOURCE,  &desc->flags))
+	if (!value && test_bit(FLAG_OPEN_SOURCE,  &desc->flags)) {
+		pr_err("open source second");
 		return gpiod_direction_input(desc);
+	}
 
 	spin_lock_irqsave(&gpio_lock, flags);
 
@@ -1765,9 +1771,11 @@ static int gpiod_direction_output(struct gpio_desc *desc, int value)
 	trace_gpio_value(desc_to_gpio(desc), 0, value);
 	trace_gpio_direction(desc_to_gpio(desc), 0, status);
 lose:
+	pr_err("lose");
 	return status;
 fail:
 	spin_unlock_irqrestore(&gpio_lock, flags);
+	pr_err("fail");
 	if (status)
 		pr_debug("%s: gpio-%d status %d\n", __func__,
 			 desc_to_gpio(desc), status);

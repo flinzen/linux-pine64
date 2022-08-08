@@ -553,6 +553,14 @@
 				reg = <0x1a>;
 				device_type = "codec";
 			};
+			
+			pn544: pn544@24 {
+				compatible = "nxp,pn544";
+				reg = <0x24>;
+				clock-frequency = <400000>;
+				interrupt-gpios = <&pio PC 7 1 1 1 1>;
+				enable-gpios = <&pio PB 0 0 1 1 1>;
+			};
 		};
 
 		twi2: twi@0x01c2b400{

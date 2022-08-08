@@ -757,9 +757,9 @@ static int sunxi_pinctrl_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
 		return -ENXIO;
 
 	desc = sunxi_pinctrl_desc_find_function_by_pin(pctl, pinnum, "irq");
-	if (!desc)
+	if (!desc) {
 		return -EINVAL;
-
+	}
 	irqnum = desc->irqbank * IRQ_PER_BANK + desc->irqnum;
 
 	dev_dbg(chip->dev, "%s: request IRQ for GPIO %d, return %d\n",
